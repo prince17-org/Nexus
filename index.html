@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Nexus API Key Manager</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #fff; padding: 20px; }
+    input, button {
+      width: 100%; padding: 10px; margin: 5px 0;
+      border-radius: 6px; border: none;
+      font-family: monospace;
+    }
+    input { background: #222; color: #0f0; }
+    button { background: #3b82f6; color: #fff; font-weight: bold; }
+    .key-item {
+      background: #1c1c1c; padding: 8px;
+      margin: 4px 0; border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🔐 Nexus API Key Manager</h2>
+
+  <input id="newKey" type="text" placeholder="Paste new API key..." />
+  <button onclick="addKey()">➕ Add Key</button>
+  <button onclick="saveToServer()">💾 Save to Server</button>
+
+  <div class="key-list" id="keyList"></div>
+  <p id="status"></p>
+
+  <script>
+    const serverURL = "save.php";
+
+    let keyArray = [];
+
+    function init() {
+      fetch("apikeys.json")
+        .then(res => res.json())
+        .then(data => {
+          keyArray = data.keys || [];
+          renderKeys();
+        })
+        .catch(() => {
+          keyArray = [];
+          renderKeys();
+        });
+    }
+
+    function maskKey(key) {
+      return key.length > 8 ? 'sk-' + '*'.repeat(key.length - 8) + key.slice(-4) : key;
+    }
+
+    function renderKeys() {
+      const list = document.getElementById("keyList");
+      list.innerHTML = keyArray.length === 0
+        ? "<i>No keys yet. Add one!</i>"
+        : keyArray.map((key, i) => `
+          <div class="key-item">
+            ${maskKey(key)}
+            <button onclick="removeKey(${i})" style="float:right;background:red;">❌</button>
+          </div>
+        `).join('');
+    }
+
+    function addKey() {
+      const newKey = document.getElementById("newKey").value.trim();
+      if (newKey && !keyArray.includes(newKey)) {
+        keyArray.push(newKey);
+        document.getElementById("newKey").value = "";
+        renderKeys();
+      } else {
+        alert("Invalid or duplicate key.");
+      }
+    }
+
+    function removeKey(index) {
+      keyArray.splice(index, 1);
+      renderKeys();
+    }
+
+    function saveToServer() {
+      fetch(serverURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keys: keyArray })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("status").innerText = "✅ " + data.message;
+      })
+      .catch(() => {
+        document.getElementById("status").innerText = "❌ Failed to save to server.";
+      });
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
